@@ -30,7 +30,8 @@ def createTeam(firstIndex, secondIndex, isRed):
     """
 
     # The following line is an example only; feel free to change it.
-    return [AgentOne(firstIndex, secondIndex), AgentTwo(secondIndex, firstIndex)]
+
+    return [AgentOne(firstIndex), AgentOne(secondIndex)]
 
 ##########
 # Agents #
@@ -67,15 +68,55 @@ class AgentOne(CaptureAgent):
         '''
         Your initialization code goes here, if you need any.
         '''
+        self.reverseRed = False
+        self.reverseBlue = False
+
+    def intersection(self, lst1, lst2): 
+        lst3 = [value for value in lst1 if value in lst2] 
+        return lst3 
+
+    def nbFoodAvailable(self, foodList):
+        count = 0
+        for row in foodList:
+            for elem in row:
+                if elem == True:
+                    count += 1
+        return count
 
     def chooseAction(self, gameState: GameState) -> str:
         """
         Picks among legal actions randomly.
         """
         actions = gameState.getLegalActions(self.index)
+        #print(gameState.isOnRedTeam(self.index))
+        redActions = ["East", "Jump_East", "Stop", "FROZEN", "South", "Jump_South"]
+        blueActions = ["West", "Jump_West", "Stop", "FROZEN", "North", "Jump_North"]
+    
+        previousState = self.getPreviousObservation()
+        currentState = self.getCurrentObservation()
 
+        if gameState.isOnRedTeam(self.index):
+            if previousState:
+                print(self.nbFoodAvailable(previousState.getBlueFood()), self.nbFoodAvailable(currentState.getBlueFood()))
+            if previousState and self.nbFoodAvailable(previousState.getBlueFood()) != self.nbFoodAvailable(currentState.getBlueFood()):
+                print(self.nbFoodAvailable(previousState.getBlueFood()), self.nbFoodAvailable(currentState.getBlueFood()))
+                self.reverseRed = True
+            
+            if self.reverseRed:
+                possiblesActions = self.intersection(blueActions,actions)    
+            else:
+                possiblesActions = self.intersection(redActions,actions)   
+        else:
+            if previousState and self.nbFoodAvailable(previousState.getRedFood()) != self.nbFoodAvailable(currentState.getRedFood()):
+                self.reverseBlue = True
+            
+            if self.reverseBlue:
+                possiblesActions = self.intersection(redActions,actions)    
+            else:
+                possiblesActions = self.intersection(blueActions,actions)
 
-        return random.choice(actions)
+        print(possiblesActions)
+        return random.choice(possiblesActions)
 
 
 class AgentTwo(CaptureAgent):
