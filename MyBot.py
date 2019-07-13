@@ -16,6 +16,7 @@ from pacman.game import Directions
 import pacman.util as util # Free utility functions like Stack or Queue ! 
 from pacman.capture import GameState
 from pacman.captureAgents import CaptureAgent
+import sys
 
 #################
 # Team creation #
@@ -82,8 +83,27 @@ class AgentOne(CaptureAgent):
                 if elem == True:
                     count += 1
         return count
+    
+    def transformAllFoodToPositions(self, foodList):
+        allFoodPositions = []
+        for i, row in enumerate(foodList):
+            for  j, value in enumerate(row):
+                if value == True:
+                    allFoodPositions.append((i,j))
+        return allFoodPositions
 
-    def chooseAction(self, gameState: GameState) -> str:
+    def closestFood(self, foodList, gameState):
+        allFoodPositions = self.transformAllFoodToPositions(foodList)
+        closestFoodDistance = sys.maxsize
+        closestFoodPosition = (1,1) if gameState.isOnRedTeam(self.index) else (32,15)
+        for pos in allFoodPositions:
+            dist = self.getMazeDistance(gameState.getAgentPosition(self.index), pos)
+            if dist < closestFoodDistance:
+                closestFoodDistance = dist
+                closestFoodPosition = pos
+        return closestFoodPosition
+                
+    def strategyBasic(self, gameState):
         """
         Picks among legal actions randomly.
         """
@@ -95,12 +115,17 @@ class AgentOne(CaptureAgent):
         previousState = self.getPreviousObservation()
         currentState = self.getCurrentObservation()
 
+        print(self.index, gameState.getAgentPosition(self.index), self.closestFood(self.getFood(gameState), gameState))
+
         if gameState.isOnRedTeam(self.index):
             if previousState:
                 print(self.nbFoodAvailable(previousState.getBlueFood()), self.nbFoodAvailable(currentState.getBlueFood()))
             if previousState and self.nbFoodAvailable(previousState.getBlueFood()) != self.nbFoodAvailable(currentState.getBlueFood()):
                 print(self.nbFoodAvailable(previousState.getBlueFood()), self.nbFoodAvailable(currentState.getBlueFood()))
                 self.reverseRed = True
+
+            if previousState and self.getScore(previousState) < self.getScore(currentState):
+                self.reverseRed = False
             
             if self.reverseRed:
                 possiblesActions = self.intersection(blueActions,actions)    
@@ -109,6 +134,9 @@ class AgentOne(CaptureAgent):
         else:
             if previousState and self.nbFoodAvailable(previousState.getRedFood()) != self.nbFoodAvailable(currentState.getRedFood()):
                 self.reverseBlue = True
+
+            if previousState and self.getScore(previousState) < self.getScore(currentState):
+                self.reverseBlue = False
             
             if self.reverseBlue:
                 possiblesActions = self.intersection(redActions,actions)    
@@ -116,7 +144,52 @@ class AgentOne(CaptureAgent):
                 possiblesActions = self.intersection(blueActions,actions)
 
         print(possiblesActions)
+        if len(possiblesActions) == 1 and possiblesActions[0] == "Stop":
+            return random.choice(self.intersection(actions, ["South","North","Stop"]))
         return random.choice(possiblesActions)
+
+    def addPositions(self, pos1, pos2):
+        return (pos1[0]+pos2[0], pos1[1]+pos2[1])
+
+    def getBestActionToFood(self, closestFoodPosition, currentAgentPosition, possibleActions):
+        cardinalToPositionChange = {
+            "North": (0, 1),
+            "Jump_North": (0, 2),
+            "West": (-1, 0),
+            "Jump_West": (-2, 0),
+            "East": (1, 0),
+            "Jump_East": (2, 0),
+            "South": (0, -1),
+            "Jump_South": (0, -2),
+            "FROZEN": (0, 0),
+            "FREEZE": (0, 0),
+            "Stop": (0, 0)
+        }
+
+        bestAgentDistanceToFood = sys.maxsize
+        bestAgentMove = random.choice(possibleActions)
+        for action in possibleActions:
+            newAgentPosition = self.addPositions(currentAgentPosition, cardinalToPositionChange[action])
+            print(action, currentAgentPosition, newAgentPosition)
+            newAgentDistanceToFood = self.getMazeDistance(newAgentPosition, closestFoodPosition)
+
+            if newAgentDistanceToFood < bestAgentDistanceToFood:
+                bestAgentDistanceToFood = newAgentDistanceToFood
+                bestAgentMove = action
+
+        return bestAgentMove
+
+
+
+    def strategyClosestFood(self, gameState):
+        closestFoodPosition = self.closestFood(self.getFood(gameState), gameState)
+        currentAgentPosition = gameState.getAgentPosition(self.index)
+        possibleActions = gameState.getLegalActions(self.index)
+
+        return self.getBestActionToFood(closestFoodPosition, currentAgentPosition, possibleActions)
+
+    def chooseAction(self, gameState: GameState) -> str:
+        return self.strategyClosestFood(gameState)
 
 
 class AgentTwo(CaptureAgent):
