@@ -30,7 +30,7 @@ def createTeam(firstIndex, secondIndex, isRed):
     """
 
     # The following line is an example only; feel free to change it.
-    return [AgentOne(firstIndex), AgentTwo(secondIndex)]
+    return [AgentOne(firstIndex, secondIndex), AgentTwo(secondIndex, firstIndex)]
 
 ##########
 # Agents #
@@ -74,6 +74,7 @@ class AgentOne(CaptureAgent):
         """
         actions = gameState.getLegalActions(self.index)
 
+
         return random.choice(actions)
 
 
@@ -82,5 +83,9 @@ class AgentTwo(CaptureAgent):
         CaptureAgent.registerInitialState(self, gameState)
     
     def chooseAction(self, gameState: GameState) -> str:
+
+        gameState.getAgentDistances()
+
         actions = gameState.getLegalActions(self.index)
+
         return random.choice(actions)
