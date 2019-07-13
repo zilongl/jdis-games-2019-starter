@@ -92,8 +92,9 @@ class AgentOne(CaptureAgent):
                     allFoodPositions.append((i,j))
         return allFoodPositions
 
-    def closestFood(self, foodList, gameState):
+    def closestFood(self, foodList, gameState, capsulesPositions):
         allFoodPositions = self.transformAllFoodToPositions(foodList)
+        allFoodPositions += capsulesPositions
         closestFoodDistance = sys.maxsize
         closestFoodPosition = (1,1) if gameState.isOnRedTeam(self.index) else (32,15)
         for pos in allFoodPositions:
@@ -170,7 +171,7 @@ class AgentOne(CaptureAgent):
         bestAgentMove = random.choice(possibleActions)
         for action in possibleActions:
             newAgentPosition = self.addPositions(currentAgentPosition, cardinalToPositionChange[action])
-            print(action, currentAgentPosition, newAgentPosition)
+            #print(action, currentAgentPosition, newAgentPosition)
             newAgentDistanceToFood = self.getMazeDistance(newAgentPosition, closestFoodPosition)
 
             if newAgentDistanceToFood < bestAgentDistanceToFood:
@@ -179,10 +180,16 @@ class AgentOne(CaptureAgent):
 
         return bestAgentMove
 
-
+    def getAvailableCapsules(self, capsules, isRed):
+        if isRed:
+            return [pos for pos in capsules if pos[0] > 15]
+        else:
+            return [pos for pos in capsules if pos[0] < 15]
 
     def strategyClosestFood(self, gameState):
-        closestFoodPosition = self.closestFood(self.getFood(gameState), gameState)
+        capsulesPositions = self.getAvailableCapsules(gameState.getCapsules(), gameState.isOnRedTeam(self.index))
+
+        closestFoodPosition = self.closestFood(self.getFood(gameState), gameState, capsulesPositions)
         currentAgentPosition = gameState.getAgentPosition(self.index)
         possibleActions = gameState.getLegalActions(self.index)
 
